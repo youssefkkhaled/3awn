@@ -1,6 +1,6 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import Image from "next/image";
 import {
   startTransition,
   useDeferredValue,
@@ -249,13 +249,10 @@ export function DonationApp() {
         {screenState === "home" && (
           <>
             <div className="flex justify-center">
-              <Image
+              <img
                 src={statsPayload.campaign.logoUrl}
                 alt={statsPayload.campaign.campaignNameAr}
-                width={220}
-                height={220}
-                priority
-                className="rounded-[28px] object-contain"
+                className="h-[220px] w-[220px] rounded-[28px] object-contain"
               />
             </div>
 

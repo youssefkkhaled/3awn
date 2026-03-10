@@ -31,7 +31,9 @@ export function isTurnstileConfigured() {
 }
 
 export function isPostgresConfigured() {
-  return Boolean(readOptionalEnv("DATABASE_URL"));
+  return Boolean(
+    readOptionalEnv("DATABASE_URL") || readOptionalEnv("POSTGRES_URL"),
+  );
 }
 
 export const getDatabasePath = cache(() =>
@@ -43,7 +45,16 @@ export const getUploadsPath = cache(() =>
   path.join(process.cwd(), "public", "uploads"),
 );
 
-export const getDatabaseUrl = cache(() => readRequiredEnv("DATABASE_URL"));
+export const getDatabaseUrl = cache(() => {
+  const databaseUrl =
+    readOptionalEnv("DATABASE_URL") || readOptionalEnv("POSTGRES_URL");
+
+  if (!databaseUrl) {
+    throw new ConfigurationError("DATABASE_URL or POSTGRES_URL is not configured.");
+  }
+
+  return databaseUrl;
+});
 
 export const getAdminEmail = cache(() =>
   readOptionalEnv("ADMIN_USERNAME") ||
@@ -109,11 +120,16 @@ export function getIpHashPepper() {
 
 export function isObjectStorageConfigured() {
   return Boolean(
-    readOptionalEnv("S3_BUCKET") &&
-      readOptionalEnv("S3_ACCESS_KEY_ID") &&
-      readOptionalEnv("S3_SECRET_ACCESS_KEY") &&
-      readOptionalEnv("S3_PUBLIC_BASE_URL"),
+    readOptionalEnv("BLOB_READ_WRITE_TOKEN") ||
+      (readOptionalEnv("S3_BUCKET") &&
+        readOptionalEnv("S3_ACCESS_KEY_ID") &&
+        readOptionalEnv("S3_SECRET_ACCESS_KEY") &&
+        readOptionalEnv("S3_PUBLIC_BASE_URL")),
   );
+}
+
+export function isBlobStorageConfigured() {
+  return Boolean(readOptionalEnv("BLOB_READ_WRITE_TOKEN"));
 }
 
 export const getS3Bucket = cache(() => readRequiredEnv("S3_BUCKET"));

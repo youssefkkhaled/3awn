@@ -1,33 +1,34 @@
 # Ramadan Charity Meals
 
-Arabic RTL donation app built with Next.js and Tailwind. The simplest production deployment is now a single Render web service with one persistent disk. That keeps the setup small: SQLite for app data, local file storage on the Render disk for receipt screenshots and logo uploads, and optional Cloudflare Turnstile.
+Arabic RTL donation app built with Next.js and Tailwind. For your short-term launch, the recommended deployment path is now `Vercel + Postgres + Vercel Blob`, which avoids the local-disk limitation on Vercel while keeping the app logic intact.
 
-## Simplest Render Deployment
+## Recommended Deployment
 
 Use:
 
-- one Render web service
-- one Render persistent disk
-- no separate database service
-- no separate storage provider
-- no Cloudflare account unless you want Turnstile later
+- `Vercel` for hosting
+- `PostgreSQL` for shared app data
+- `Vercel Blob` for receipt screenshots and logo uploads
+- optional `Cloudflare Turnstile`
 
-The Render blueprint is already in [render.yaml](/Users/ihessam/iftar%20app/render.yaml).
+The app supports:
 
-## Required Environment
+- `DATABASE_URL` or `POSTGRES_URL` for Postgres
+- `BLOB_READ_WRITE_TOKEN` for Vercel Blob
 
-For the simple Render setup, set:
+If Postgres is configured, the app uses:
+
+- PostgreSQL for donations, settings, admin auth, sessions, adjustments, and audit logs
+- Blob/object storage for uploads
+
+## Required Environment For Vercel
 
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 - `SESSION_SECRET`
 - `IP_HASH_PEPPER`
-
-These are set automatically by the blueprint:
-
-- `NODE_ENV=production`
-- `DATABASE_PATH=/var/data/app.db`
-- `UPLOADS_DIR=/var/data/uploads`
+- `BLOB_READ_WRITE_TOKEN`
+- `DATABASE_URL` or `POSTGRES_URL`
 
 Optional:
 
@@ -62,35 +63,37 @@ npm run lint
 npx tsc --noEmit
 npm test
 npm run build
-npm run check:render-env
+npm run check:vercel-env
 ```
 
-## Render Steps
+## Vercel Steps
 
-1. Push this repo to GitHub or GitLab.
-2. In Render, click `New` -> `Blueprint`.
-3. Connect the repo.
-4. Render reads [render.yaml](/Users/ihessam/iftar%20app/render.yaml) and creates one web service with one disk.
+1. Push this repo to GitHub.
+2. Import the repo into Vercel.
+3. Add a Postgres database and make sure Vercel exposes either `POSTGRES_URL` or you manually set `DATABASE_URL`.
+4. Enable Vercel Blob and make sure `BLOB_READ_WRITE_TOKEN` is available in the project env.
 5. Fill the manual env vars:
    - `ADMIN_USERNAME`
    - `ADMIN_PASSWORD`
    - `SESSION_SECRET`
    - `IP_HASH_PEPPER`
 6. Deploy.
-7. Open the Render URL and test `/` and `/admin/login`.
+7. Open the Vercel URL and test `/` and `/admin/login`.
 
-## Advanced Mode
+You can also follow [VERCEL_DEPLOY_CHECKLIST.md](/Users/ihessam/iftar%20app/VERCEL_DEPLOY_CHECKLIST.md).
 
-The repo still supports a more scalable mode using:
+## Other Deployment Paths
 
-- `DATABASE_URL`
-- `S3_*`
-- optional Turnstile
+The repo still contains:
 
-That path is only needed if you later want PostgreSQL plus S3-compatible object storage.
+- SQLite + disk fallback for local development
+- Render disk-based deployment files
+- S3-compatible storage support for non-Vercel Postgres deployments
+
+Those are secondary now. The short-term Vercel path is the main target.
 
 ## Notes
 
 - Receipt confirmation remains trust-based: clicking `تأكيد الدفع` records a confirmed donation after receipt upload.
-- Uploaded screenshots and admin logo uploads are served through the app from the configured uploads directory.
+- Uploaded screenshots and campaign logo uploads can be stored in Vercel Blob in the recommended deployment.
 - `next/font/google` still fetches `Cairo` and `Scheherazade New` during production builds.

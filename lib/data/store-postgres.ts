@@ -413,7 +413,7 @@ export async function listAuditLogs(limit = 20) {
 export async function uploadLogoAsset(file: File) {
   if (!isObjectStorageConfigured()) {
     throw new ConfigurationError(
-      "S3-compatible object storage is required when DATABASE_URL is configured.",
+      "Blob or object storage is required when PostgreSQL mode is enabled.",
     );
   }
 
@@ -431,7 +431,7 @@ export async function uploadLogoAsset(file: File) {
 export async function uploadReceiptAsset(file: File) {
   if (!isObjectStorageConfigured()) {
     throw new ConfigurationError(
-      "S3-compatible object storage is required when DATABASE_URL is configured.",
+      "Blob or object storage is required when PostgreSQL mode is enabled.",
     );
   }
 

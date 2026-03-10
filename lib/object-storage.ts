@@ -1,3 +1,4 @@
+import { put } from "@vercel/blob";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import {
@@ -7,6 +8,7 @@ import {
   getS3PublicBaseUrl,
   getS3Region,
   getS3SecretAccessKey,
+  isBlobStorageConfigured,
   isObjectStorageConfigured,
 } from "@/lib/env";
 
@@ -36,6 +38,16 @@ export async function uploadObjectToStorage(args: {
 }) {
   if (!isObjectStorageConfigured()) {
     throw new Error("Object storage is not configured.");
+  }
+
+  if (isBlobStorageConfigured()) {
+    const result = await put(args.key, args.body, {
+      access: "public",
+      contentType: args.contentType,
+      addRandomSuffix: true,
+    });
+
+    return result.url;
   }
 
   await getS3Client().send(
