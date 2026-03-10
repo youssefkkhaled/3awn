@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { getUploadsPath } from "@/lib/env";
 import { AppError, RateLimitAppError } from "@/lib/errors";
 import { DEFAULT_CAMPAIGN_SLUG, DEFAULT_HERO_IMAGE_PATH } from "@/lib/seed";
 import { createId, getDatabase, nowIso } from "@/lib/sqlite";
@@ -402,7 +403,7 @@ export async function listAuditLogs(limit = 20) {
 }
 
 export async function uploadLogoAsset(file: File) {
-  const uploadsDirectory = path.join(process.cwd(), "public", "uploads");
+  const uploadsDirectory = path.join(getUploadsPath(), "logos");
   await mkdir(uploadsDirectory, { recursive: true });
 
   const extension = file.name.split(".").pop() || "bin";
@@ -412,16 +413,11 @@ export async function uploadLogoAsset(file: File) {
 
   await writeFile(filePath, buffer);
 
-  return `/uploads/${fileName}`;
+  return `/storage/logos/${fileName}`;
 }
 
 export async function uploadReceiptAsset(file: File) {
-  const uploadsDirectory = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "receipts",
-  );
+  const uploadsDirectory = path.join(getUploadsPath(), "receipts");
   await mkdir(uploadsDirectory, { recursive: true });
 
   const extension = file.name.split(".").pop() || "bin";
@@ -431,7 +427,7 @@ export async function uploadReceiptAsset(file: File) {
 
   await writeFile(filePath, buffer);
 
-  return `/uploads/receipts/${fileName}`;
+  return `/storage/receipts/${fileName}`;
 }
 
 export async function updateCampaignSettings(

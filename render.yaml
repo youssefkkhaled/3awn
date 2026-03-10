@@ -6,13 +6,17 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /
+    disk:
+      name: iftar-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: iftar-db
-          property: connectionString
+      - key: DATABASE_PATH
+        value: /var/data/app.db
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
       - key: ADMIN_USERNAME
         sync: false
       - key: ADMIN_PASSWORD
@@ -25,19 +29,3 @@ services:
         sync: false
       - key: TURNSTILE_SECRET_KEY
         sync: false
-      - key: S3_BUCKET
-        sync: false
-      - key: S3_REGION
-        value: us-east-1
-      - key: S3_ENDPOINT
-        sync: false
-      - key: S3_ACCESS_KEY_ID
-        sync: false
-      - key: S3_SECRET_ACCESS_KEY
-        sync: false
-      - key: S3_PUBLIC_BASE_URL
-        sync: false
-
-databases:
-  - name: iftar-db
-    plan: starter

@@ -38,6 +38,11 @@ export const getDatabasePath = cache(() =>
   readOptionalEnv("DATABASE_PATH") || path.join(process.cwd(), "data", "app.db"),
 );
 
+export const getUploadsPath = cache(() =>
+  readOptionalEnv("UPLOADS_DIR") ||
+  path.join(process.cwd(), "public", "uploads"),
+);
+
 export const getDatabaseUrl = cache(() => readRequiredEnv("DATABASE_URL"));
 
 export const getAdminEmail = cache(() =>
