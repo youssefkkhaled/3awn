@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getUploadsPath } from "@/lib/env";
+import {
+  getDonationRateLimitCount,
+  getDonationRateLimitWindowMinutes,
+  getUploadsPath,
+} from "@/lib/env";
 import { AppError, RateLimitAppError } from "@/lib/errors";
 import { DEFAULT_CAMPAIGN_SLUG, DEFAULT_HERO_IMAGE_PATH } from "@/lib/seed";
 import { createId, getDatabase, nowIso } from "@/lib/sqlite";
@@ -174,6 +178,8 @@ export async function hasConfirmedDonations() {
 
 export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
   const database = getDatabase();
+  const rateLimitCount = getDonationRateLimitCount();
+  const rateLimitWindowMinutes = getDonationRateLimitWindowMinutes();
   const existing = database
     .prepare("SELECT id FROM donations WHERE idempotency_key = ? LIMIT 1")
     .get(input.idempotencyKey);
@@ -183,9 +189,11 @@ export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
   }
 
   const createdAt = nowIso();
-  const recentWindowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const recentWindowStart = new Date(
+    Date.now() - rateLimitWindowMinutes * 60 * 1000,
+  ).toISOString();
 
-  if (input.clientIpHash) {
+  if (input.clientIpHash && rateLimitCount > 0) {
     const recent = database
       .prepare(
         `
@@ -197,7 +205,7 @@ export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
       )
       .get(input.clientIpHash, recentWindowStart);
 
-    if (Number(recent?.count ?? 0) >= 5) {
+    if (Number(recent?.count ?? 0) >= rateLimitCount) {
       throw new RateLimitAppError();
     }
   }

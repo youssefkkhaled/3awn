@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { ConfigurationError, isObjectStorageConfigured } from "@/lib/env";
+import {
+  ConfigurationError,
+  getDonationRateLimitCount,
+  getDonationRateLimitWindowMinutes,
+  isObjectStorageConfigured,
+} from "@/lib/env";
 import { AppError, RateLimitAppError } from "@/lib/errors";
 import { uploadObjectToStorage } from "@/lib/object-storage";
 import { queryPostgres, withPostgresClient } from "@/lib/postgres";
@@ -184,6 +189,8 @@ export async function hasConfirmedDonations() {
 
 export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
   return withPostgresClient(async (client) => {
+    const rateLimitCount = getDonationRateLimitCount();
+    const rateLimitWindowMinutes = getDonationRateLimitWindowMinutes();
     const existing = await client.query(
       "SELECT id FROM donations WHERE idempotency_key = $1 LIMIT 1",
       [input.idempotencyKey],
@@ -194,9 +201,11 @@ export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
     }
 
     const createdAt = nowIso();
-    const recentWindowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const recentWindowStart = new Date(
+      Date.now() - rateLimitWindowMinutes * 60 * 1000,
+    ).toISOString();
 
-    if (input.clientIpHash) {
+    if (input.clientIpHash && rateLimitCount > 0) {
       const recent = await client.query(
         `
           SELECT COUNT(*)::int AS count
@@ -207,7 +216,7 @@ export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
         [input.clientIpHash, recentWindowStart],
       );
 
-      if (Number(recent.rows[0]?.count ?? 0) >= 5) {
+      if (Number(recent.rows[0]?.count ?? 0) >= rateLimitCount) {
         throw new RateLimitAppError();
       }
     }

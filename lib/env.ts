@@ -23,6 +23,17 @@ function readRequiredEnv(name: string) {
   return value;
 }
 
+function readOptionalPositiveInt(name: string, fallback: number) {
+  const value = readOptionalEnv(name);
+
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 export function isTurnstileConfigured() {
   return Boolean(
     readOptionalEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY") &&
@@ -116,6 +127,14 @@ export function getIpHashPepper() {
   }
 
   return "dev-only-pepper";
+}
+
+export function getDonationRateLimitCount() {
+  return readOptionalPositiveInt("DONATION_RATE_LIMIT_COUNT", 25);
+}
+
+export function getDonationRateLimitWindowMinutes() {
+  return readOptionalPositiveInt("DONATION_RATE_LIMIT_WINDOW_MINUTES", 10);
 }
 
 export function isObjectStorageConfigured() {
