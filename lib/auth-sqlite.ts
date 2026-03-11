@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getAdminEmail, getAdminPassword } from "@/lib/env";
 import { AuthenticationAppError } from "@/lib/errors";
 import {
   createId,
   getDatabase,
+  hashPassword,
   hashSessionToken,
   newSessionToken,
   nowIso,
@@ -17,6 +19,40 @@ const SESSION_TTL_DAYS = 7;
 interface SessionUserRow {
   id: string;
   email: string;
+}
+
+function isEnvAdminMatch(username: string, password: string) {
+  return (
+    username.trim().toLowerCase() === getAdminEmail().trim().toLowerCase() &&
+    password === getAdminPassword()
+  );
+}
+
+function syncEnvAdminUser() {
+  const database = getDatabase();
+  const now = nowIso();
+
+  database
+    .prepare(
+      `
+        INSERT INTO admin_users (id, email, password_hash, created_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          email = excluded.email,
+          password_hash = excluded.password_hash
+      `,
+    )
+    .run(
+      "local-admin",
+      getAdminEmail(),
+      hashPassword(getAdminPassword()),
+      now,
+    );
+
+  return {
+    id: "local-admin",
+    email: getAdminEmail(),
+  };
 }
 
 function getSessionUserByToken(token: string): SessionUserRow | null {
@@ -83,6 +119,11 @@ export async function requireAdminUser() {
 }
 
 export async function loginAdminUser(username: string, password: string) {
+  if (isEnvAdminMatch(username, password)) {
+    const envAdminUser = syncEnvAdminUser();
+    return createAdminSession(envAdminUser.id);
+  }
+
   const database = getDatabase();
   const user = database
     .prepare("SELECT id, email, password_hash FROM admin_users WHERE lower(email) = lower(?) LIMIT 1")
@@ -92,6 +133,11 @@ export async function loginAdminUser(username: string, password: string) {
     return false;
   }
 
+  return createAdminSession(String(user.id));
+}
+
+async function createAdminSession(userId: string) {
+  const database = getDatabase();
   const sessionToken = newSessionToken();
   const sessionId = createId();
   const createdAt = nowIso();
@@ -113,7 +159,7 @@ export async function loginAdminUser(username: string, password: string) {
     )
     .run(
       sessionId,
-      String(user.id),
+      userId,
       hashSessionToken(sessionToken),
       createdAt,
       expiresAt,

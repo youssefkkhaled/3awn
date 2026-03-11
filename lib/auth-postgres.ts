@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getAdminEmail, getAdminPassword } from "@/lib/env";
 import { AuthenticationAppError } from "@/lib/errors";
 import { queryPostgres } from "@/lib/postgres";
 import {
   createId,
+  hashPassword,
   hashSessionToken,
   newSessionToken,
   nowIso,
@@ -17,6 +19,33 @@ const SESSION_TTL_DAYS = 7;
 interface SessionUserRow {
   id: string;
   email: string;
+}
+
+function isEnvAdminMatch(username: string, password: string) {
+  return (
+    username.trim().toLowerCase() === getAdminEmail().trim().toLowerCase() &&
+    password === getAdminPassword()
+  );
+}
+
+async function syncEnvAdminUser() {
+  const now = nowIso();
+
+  await queryPostgres(
+    `
+      INSERT INTO admin_users (id, email, password_hash, created_at)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        password_hash = EXCLUDED.password_hash
+    `,
+    ["local-admin", getAdminEmail(), hashPassword(getAdminPassword()), now],
+  );
+
+  return {
+    id: "local-admin",
+    email: getAdminEmail(),
+  };
 }
 
 async function getSessionUserByToken(token: string): Promise<SessionUserRow | null> {
@@ -83,6 +112,11 @@ export async function requireAdminUser() {
 }
 
 export async function loginAdminUser(username: string, password: string) {
+  if (isEnvAdminMatch(username, password)) {
+    const envAdminUser = await syncEnvAdminUser();
+    return createAdminSession(envAdminUser.id);
+  }
+
   const result = await queryPostgres<{
     id: string;
     email: string;
@@ -102,6 +136,10 @@ export async function loginAdminUser(username: string, password: string) {
     return false;
   }
 
+  return createAdminSession(String(user.id));
+}
+
+async function createAdminSession(userId: string) {
   const sessionToken = newSessionToken();
   const sessionId = createId();
   const createdAt = nowIso();
@@ -121,7 +159,7 @@ export async function loginAdminUser(username: string, password: string) {
     `,
     [
       sessionId,
-      String(user.id),
+      userId,
       hashSessionToken(sessionToken),
       createdAt,
       expiresAt,
