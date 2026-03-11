@@ -31,7 +31,7 @@ export const createDonationRequestSchema = z
 
 export const loginSchema = z.object({
   username: z.string().trim().min(1, "أدخل اسم المستخدم."),
-  password: z.string().min(7, "كلمة المرور يجب أن تكون 7 أحرف على الأقل."),
+  password: z.string().min(1, "أدخل كلمة المرور."),
 });
 
 export const voidDonationSchema = z.object({
