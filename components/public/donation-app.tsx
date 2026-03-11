@@ -466,15 +466,34 @@ export function DonationApp() {
             </h2>
             <div className="divider" />
             {donationType === "meals" ? (
-              <div className="rounded-[22px] bg-[rgba(201,149,106,0.08)] p-5 text-center">
-                <div className="text-xs text-[var(--sand-subtle)]">
-                  إجمالي وجبات الغد بعد تبرعك
+              <div className="rounded-[22px] bg-[rgba(201,149,106,0.08)] p-5 text-right">
+                <div className="confirm-row">
+                  <span>نوع التبرع</span>
+                  <span className="tag-pill">🍱 وجبات للغد</span>
                 </div>
-                <div className="mt-3 text-6xl font-black text-[var(--sand-strong)]">
-                  {formatEnglishNumber(totalMealsTomorrowAfterMyDonation)}
+                <div className="confirm-row">
+                  <span>عدد الوجبات</span>
+                  <span className="confirm-value">
+                    {formatEnglishNumber(mealCount)} وجبة
+                  </span>
                 </div>
-                <div className="mt-2 text-sm text-[var(--sand-strong)]">
-                  وجبة مؤكدة في {distributionLabel}
+                <div className="confirm-row">
+                  <span>المبلغ النهائي</span>
+                  <span className="confirm-value">
+                    {formatEnglishNumber(totalAmount)} جنيه
+                  </span>
+                </div>
+                <div className="confirm-row">
+                  <span>موعد التوزيع</span>
+                  <span className="text-sm text-[var(--sand-strong)]">
+                    {distributionLabel}
+                  </span>
+                </div>
+                <div className="confirm-row">
+                  <span>إجمالي وجبات الغد بعد تبرعك</span>
+                  <span className="confirm-value">
+                    {formatEnglishNumber(totalMealsTomorrowAfterMyDonation)} وجبة
+                  </span>
                 </div>
                 <div className="mt-4 text-sm text-[var(--sand-muted)]">
                   من بينها {formatEnglishNumber(mealCount)} وجبة من تبرعك الحالي
