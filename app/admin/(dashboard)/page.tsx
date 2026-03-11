@@ -6,6 +6,7 @@ import {
 import { getDistributionDateKey } from "@/lib/date";
 import { formatArabicDateTime, formatEnglishNumber } from "@/lib/format";
 import { buildPublicStats } from "@/lib/stats";
+import type { LatestActivityItem } from "@/lib/types";
 
 export default async function AdminDashboardPage() {
   const settings = await getCampaignSettings();
@@ -13,7 +14,13 @@ export default async function AdminDashboardPage() {
     getDistributionDateKey(new Date(), settings.timezone),
   );
   const stats = buildPublicStats(settings, snapshot);
-  const latestActivity = await listLatestActivity();
+  let latestActivity: LatestActivityItem[] = [];
+
+  try {
+    latestActivity = await listLatestActivity();
+  } catch {
+    latestActivity = [];
+  }
 
   return (
     <div className="grid gap-6">

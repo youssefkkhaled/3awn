@@ -9,7 +9,11 @@ export function formatEnglishNumber(value: number) {
 }
 
 export function formatArabicDateTime(value: Date | string) {
-  return arabicDateTimeFormatter.format(
-    typeof value === "string" ? new Date(value) : value,
-  );
+  const parsedValue = typeof value === "string" ? new Date(value) : value;
+
+  if (Number.isNaN(parsedValue.getTime())) {
+    return "—";
+  }
+
+  return arabicDateTimeFormatter.format(parsedValue);
 }
