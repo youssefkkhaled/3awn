@@ -94,6 +94,21 @@ export function getRemainingDays(
   );
 }
 
+export function getDistributionWindowDays(
+  campaignEndDate: string,
+  date = new Date(),
+  timeZone = DEFAULT_TIMEZONE,
+) {
+  const distributionDateKey = getDistributionDateKey(date, timeZone);
+
+  return Math.max(
+    0,
+    dateKeyToEpochDays(campaignEndDate) -
+      dateKeyToEpochDays(distributionDateKey) +
+      1,
+  );
+}
+
 export function isCampaignEnded(
   campaignEndDate: string,
   date = new Date(),

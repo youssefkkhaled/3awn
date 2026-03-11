@@ -22,7 +22,7 @@ const settings: CampaignSettings = {
 };
 
 describe("buildPublicStats", () => {
-  it("combines direct meals with the projected share from the monthly pool", () => {
+  it("allocates monthly-pool meals in a round-robin cycle that starts with the current distribution day", () => {
     const stats = buildPublicStats(
       settings,
       {
@@ -34,9 +34,10 @@ describe("buildPublicStats", () => {
     );
 
     expect(stats.remainingDays).toBe(8);
+    expect(stats.distributionWindowDays).toBe(8);
     expect(stats.monthlyPoolMealsTotal).toBe(10);
-    expect(stats.monthlyPoolMealsPerDay).toBe(1);
-    expect(stats.projectedMealsTomorrow).toBe(26);
+    expect(stats.monthlyPoolMealsForDistributionDate).toBe(2);
+    expect(stats.projectedMealsTomorrow).toBe(27);
     expect(stats.campaignEnded).toBe(false);
   });
 
@@ -52,8 +53,9 @@ describe("buildPublicStats", () => {
     );
 
     expect(stats.remainingDays).toBe(0);
+    expect(stats.distributionWindowDays).toBe(0);
     expect(stats.monthlyPoolMealsTotal).toBe(0);
-    expect(stats.monthlyPoolMealsPerDay).toBe(0);
+    expect(stats.monthlyPoolMealsForDistributionDate).toBe(0);
     expect(stats.campaignEnded).toBe(true);
   });
 });

@@ -83,7 +83,7 @@ export async function createDonation(
       parsedInput.data.type === "meals" ? distributionDate : null,
     clientIpHash: options.clientIpHash,
     userAgent: options.userAgent,
-    receiptImagePath: parsedInput.data.receiptImagePath,
+    receiptImagePath: parsedInput.data.receiptImagePath ?? null,
   });
 
   const refreshedSnapshot = await getCampaignSnapshot(currentStats.distributionDate);

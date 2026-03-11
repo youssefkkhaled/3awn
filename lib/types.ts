@@ -31,10 +31,11 @@ export interface PublicStats {
   distributionDateLabel: string;
   mealPriceEGP: number;
   remainingDays: number;
+  distributionWindowDays: number;
   directMeals: number;
   monthlyPoolEGP: number;
   monthlyPoolMealsTotal: number;
-  monthlyPoolMealsPerDay: number;
+  monthlyPoolMealsForDistributionDate: number;
   projectedMealsTomorrow: number;
   campaignEnded: boolean;
   acceptingDonations: boolean;
@@ -46,7 +47,7 @@ export interface CreateDonationRequest {
   mealsCount?: number;
   amountEGP?: number;
   turnstileToken: string;
-  receiptImagePath: string;
+  receiptImagePath?: string | null;
 }
 
 export interface CreateDonationResponse {
@@ -132,7 +133,7 @@ export interface ConfirmedDonationInsert {
   distributionDate: string | null;
   clientIpHash: string | null;
   userAgent: string | null;
-  receiptImagePath: string;
+  receiptImagePath: string | null;
 }
 
 export interface AdjustmentInsert {

@@ -12,6 +12,10 @@ import {
 import { SetupPanel } from "@/components/public/setup-panel";
 import { TurnstileWidget } from "@/components/public/turnstile-widget";
 import { formatEnglishNumber } from "@/lib/format";
+import {
+  getMonthlyPoolMealsTotal,
+  getRoundRobinMealsForDayOffset,
+} from "@/lib/stats";
 import type { DonationType, PublicStatsPayload } from "@/lib/types";
 
 type ScreenState = "home" | "choose" | "confirm" | "done";
@@ -30,7 +34,6 @@ export function DonationApp() {
   const [donationType, setDonationType] = useState<DonationType | null>(null);
   const [mealCount, setMealCount] = useState(1);
   const [amountEGP, setAmountEGP] = useState("");
-  const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [statsPayload, setStatsPayload] = useState<PublicStatsPayload | null>(null);
@@ -43,19 +46,24 @@ export function DonationApp() {
   const parsedAmount = Number(deferredAmount || 0);
   const mealPrice = statsPayload?.stats.mealPriceEGP ?? 85;
   const totalMeals =
-    donationType === "meals" ? mealCount : Math.floor(parsedAmount / mealPrice);
+    donationType === "meals"
+      ? mealCount
+      : getMonthlyPoolMealsTotal(parsedAmount, mealPrice);
   const totalAmount =
     donationType === "meals" ? mealCount * mealPrice : parsedAmount;
-  const perDayMeals =
-    statsPayload && statsPayload.stats.remainingDays > 0
-      ? Math.floor(parsedAmount / mealPrice / statsPayload.stats.remainingDays)
+  const amountMealsForDistributionDate =
+    statsPayload && donationType === "amount"
+      ? getRoundRobinMealsForDayOffset(
+          totalMeals,
+          statsPayload.stats.distributionWindowDays,
+        )
       : 0;
   const totalMealsTomorrow = statsPayload?.stats.projectedMealsTomorrow ?? 0;
   const totalMealsTomorrowAfterMyDonation =
     donationType === "meals"
       ? totalMealsTomorrow + mealCount
       : donationType === "amount"
-        ? totalMealsTomorrow + perDayMeals
+        ? totalMealsTomorrow + amountMealsForDistributionDate
         : totalMealsTomorrow;
   const canDonate = Boolean(
     statsPayload &&
@@ -67,7 +75,6 @@ export function DonationApp() {
     setDonationType(null);
     setMealCount(1);
     setAmountEGP("");
-    setReceiptImage(null);
     setTurnstileToken("");
     setTurnstileResetKey((current) => current + 1);
     setValidationError(null);
@@ -142,11 +149,6 @@ export function DonationApp() {
       return;
     }
 
-    if (!receiptImage) {
-      setValidationError("ارفع لقطة شاشة التحويل قبل تأكيد التبرع.");
-      return;
-    }
-
     setSubmitting(true);
     setValidationError(null);
 
@@ -155,7 +157,6 @@ export function DonationApp() {
       formData.set("idempotencyKey", crypto.randomUUID());
       formData.set("type", donationType);
       formData.set("turnstileToken", turnstileToken);
-      formData.set("receiptImage", receiptImage);
 
       if (donationType === "meals") {
         formData.set("mealsCount", String(mealCount));
@@ -433,8 +434,12 @@ export function DonationApp() {
                       رمضان
                     </div>
                     <div>
-                      أي {formatEnglishNumber(perDayMeals)} وجبة يوميًا على مدار{" "}
-                      {formatEnglishNumber(statsPayload.stats.remainingDays)} يوم
+                      يضيف {formatEnglishNumber(amountMealsForDistributionDate)} وجبة
+                      إلى يوم التوزيع الحالي
+                    </div>
+                    <div>
+                      ثم تُوزَّع بقية الوجبات يومًا بعد يوم حتى آخر يوم، ثم يبدأ
+                      التوزيع من أول يوم من جديد حتى يقل المبلغ عن سعر وجبة واحدة
                     </div>
                   </div>
                 )}
@@ -503,7 +508,7 @@ export function DonationApp() {
                 <div className="confirm-row">
                   <span>إضافة وجبات الغد</span>
                   <span className="confirm-value">
-                    +{formatEnglishNumber(perDayMeals)} وجبة يوميًا
+                    +{formatEnglishNumber(amountMealsForDistributionDate)} وجبة
                   </span>
                 </div>
                 <div className="confirm-row">
@@ -512,28 +517,12 @@ export function DonationApp() {
                     {formatEnglishNumber(totalMealsTomorrowAfterMyDonation)} وجبة
                   </span>
                 </div>
+                <div className="mt-4 text-xs leading-7 text-[var(--sand-subtle)]">
+                  بعد ذلك يتم توزيع بقية وجبات مبلغ الشهر بالتتابع على الأيام
+                  التالية، وعند الوصول لآخر يوم يبدأ التوزيع من أول يوم مرة أخرى.
+                </div>
               </div>
             )}
-
-            <label className="flex flex-col gap-2 text-right text-sm text-[var(--sand-muted)]">
-              لقطة شاشة التحويل
-              <input
-                type="file"
-                accept="image/*"
-                className="field-input cursor-pointer file:ml-3 file:cursor-pointer file:rounded-xl file:border-0 file:bg-[rgba(201,149,106,0.16)] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[var(--sand-strong)]"
-                onChange={(event) =>
-                  setReceiptImage(event.target.files?.[0] ?? null)
-                }
-              />
-              <span className="text-xs text-[var(--sand-subtle)]">
-                ارفع صورة واضحة لإثبات التحويل. الحد الأقصى 5MB.
-              </span>
-              {receiptImage ? (
-                <span className="text-xs text-[var(--sand-strong)]">
-                  الملف المختار: {receiptImage.name}
-                </span>
-              ) : null}
-            </label>
 
             <div className="instapay-box">
               <div className="text-xs text-[var(--sand-subtle)]">ادفع عبر</div>
@@ -602,9 +591,9 @@ export function DonationApp() {
                 ? `تبرعك بـ ${formatEnglishNumber(totalMeals)} وجبة سيصل للمستحقين في ${distributionLabel}.`
                 : `تبرعك بـ ${formatEnglishNumber(totalAmount)} جنيه يكفل ${formatEnglishNumber(
                     totalMeals,
-                  )} وجبة على مدار ${formatEnglishNumber(
-                    statsPayload.stats.remainingDays,
-                  )} يوم متبقٍ من رمضان.`}
+                  )} وجبة، ويضيف ${formatEnglishNumber(
+                    amountMealsForDistributionDate,
+                  )} وجبة إلى إجمالي يوم التوزيع الحالي.`}
             </p>
             <div className="divider" />
             <div className="text-xs text-[var(--sand-faint)]">

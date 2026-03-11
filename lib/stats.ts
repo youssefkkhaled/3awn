@@ -1,6 +1,7 @@
 import {
   formatArabicDateLabel,
   getDistributionDateKey,
+  getDistributionWindowDays,
   getRemainingDays,
 } from "@/lib/date";
 import { DEFAULT_HERO_IMAGE_PATH } from "@/lib/seed";
@@ -10,6 +11,35 @@ import type {
   PublicStats,
   PublicStatsPayload,
 } from "@/lib/types";
+
+export function getMonthlyPoolMealsTotal(
+  monthlyPoolEGP: number,
+  mealPriceEGP: number,
+) {
+  if (mealPriceEGP <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(monthlyPoolEGP / mealPriceEGP));
+}
+
+export function getRoundRobinMealsForDayOffset(
+  totalMeals: number,
+  distributionWindowDays: number,
+  dayOffset = 0,
+) {
+  if (totalMeals <= 0 || distributionWindowDays <= 0) {
+    return 0;
+  }
+
+  const normalizedOffset =
+    ((dayOffset % distributionWindowDays) + distributionWindowDays) %
+    distributionWindowDays;
+  const baseMealsPerDay = Math.floor(totalMeals / distributionWindowDays);
+  const remainderMeals = totalMeals % distributionWindowDays;
+
+  return baseMealsPerDay + (normalizedOffset < remainderMeals ? 1 : 0);
+}
 
 export function buildPublicStats(
   settings: CampaignSettings,
@@ -22,24 +52,32 @@ export function buildPublicStats(
     settings.timezone,
   );
   const distributionDate = getDistributionDateKey(now, settings.timezone);
-  const monthlyPoolMealsTotal = Math.floor(
-    snapshot.monthlyPoolEGP / settings.mealPriceEGP,
+  const distributionWindowDays = getDistributionWindowDays(
+    settings.campaignEndDate,
+    now,
+    settings.timezone,
   );
-  const monthlyPoolMealsPerDay =
-    remainingDays > 0
-      ? Math.floor(monthlyPoolMealsTotal / remainingDays)
-      : 0;
+  const monthlyPoolMealsTotal = getMonthlyPoolMealsTotal(
+    snapshot.monthlyPoolEGP,
+    settings.mealPriceEGP,
+  );
+  const monthlyPoolMealsForDistributionDate = getRoundRobinMealsForDayOffset(
+    monthlyPoolMealsTotal,
+    distributionWindowDays,
+  );
 
   return {
     distributionDate,
     distributionDateLabel: formatArabicDateLabel(distributionDate),
     mealPriceEGP: settings.mealPriceEGP,
     remainingDays,
+    distributionWindowDays,
     directMeals: snapshot.directMeals,
     monthlyPoolEGP: snapshot.monthlyPoolEGP,
     monthlyPoolMealsTotal,
-    monthlyPoolMealsPerDay,
-    projectedMealsTomorrow: snapshot.directMeals + monthlyPoolMealsPerDay,
+    monthlyPoolMealsForDistributionDate,
+    projectedMealsTomorrow:
+      snapshot.directMeals + monthlyPoolMealsForDistributionDate,
     campaignEnded: remainingDays === 0,
     acceptingDonations: settings.acceptingDonations,
   };

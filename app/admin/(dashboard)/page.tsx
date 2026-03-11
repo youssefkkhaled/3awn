@@ -44,7 +44,7 @@ export default async function AdminDashboardPage() {
             من مبلغ الشهر لليوم
           </div>
           <div className="mt-3 text-4xl font-black text-[var(--sand-strong)]">
-            {formatEnglishNumber(stats.monthlyPoolMealsPerDay)}
+            {formatEnglishNumber(stats.monthlyPoolMealsForDistributionDate)}
           </div>
           <div className="mt-2 text-xs text-[var(--sand-subtle)]">
             {formatEnglishNumber(stats.monthlyPoolMealsTotal)} وجبة إجماليًا من
@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
           <div className="rounded-2xl border border-[rgba(255,213,142,0.18)] bg-[rgba(255,214,149,0.08)] p-4">
             <div className="text-sm text-[var(--sand-subtle)]">وجبات مبلغ الشهر</div>
             <div className="mt-2 text-3xl font-black text-[var(--sand-strong)]">
-              {formatEnglishNumber(stats.monthlyPoolMealsPerDay)}
+              {formatEnglishNumber(stats.monthlyPoolMealsForDistributionDate)}
             </div>
           </div>
         </div>

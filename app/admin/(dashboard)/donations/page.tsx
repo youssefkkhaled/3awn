@@ -84,14 +84,13 @@ export default async function AdminDonationsPage({
               <th>الوجبات</th>
               <th>المبلغ</th>
               <th>تاريخ التوزيع</th>
-              <th>الإثبات</th>
               <th>الإجراء</th>
             </tr>
           </thead>
           <tbody>
             {donations.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-sm text-[var(--sand-muted)]">
+                <td colSpan={7} className="text-sm text-[var(--sand-muted)]">
                   لا توجد تبرعات مطابقة للفلاتر الحالية.
                 </td>
               </tr>
@@ -114,20 +113,6 @@ export default async function AdminDonationsPage({
                   </td>
                   <td>{formatEnglishNumber(donation.amountEGP)} جنيه</td>
                   <td>{donation.distributionDate ?? "—"}</td>
-                  <td>
-                    {donation.receiptImagePath ? (
-                      <a
-                        href={donation.receiptImagePath}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-semibold text-[var(--sand-strong)] underline underline-offset-4"
-                      >
-                        عرض الصورة
-                      </a>
-                    ) : (
-                      <span className="text-sm text-[var(--sand-subtle)]">—</span>
-                    )}
-                  </td>
                   <td>
                     {donation.status === "confirmed" ? (
                       <form

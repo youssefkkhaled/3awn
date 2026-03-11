@@ -9,7 +9,7 @@ export const createDonationRequestSchema = z
     mealsCount: z.coerce.number().int().min(1).optional(),
     amountEGP: z.coerce.number().int().min(1).optional(),
     turnstileToken: z.string().trim().min(1),
-    receiptImagePath: z.string().trim().min(1, "صورة التحويل مطلوبة."),
+    receiptImagePath: z.string().trim().optional().nullable(),
   })
   .superRefine((value, ctx) => {
     if (value.type === "meals" && !value.mealsCount) {
