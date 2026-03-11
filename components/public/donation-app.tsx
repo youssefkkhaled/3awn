@@ -50,9 +50,13 @@ export function DonationApp() {
     statsPayload && statsPayload.stats.remainingDays > 0
       ? Math.floor(parsedAmount / mealPrice / statsPayload.stats.remainingDays)
       : 0;
-  const bookedMealsTomorrow = statsPayload?.stats.directMeals ?? 0;
-  const bookedMealsAfterMyDonation =
-    donationType === "meals" ? bookedMealsTomorrow + mealCount : bookedMealsTomorrow;
+  const totalMealsTomorrow = statsPayload?.stats.projectedMealsTomorrow ?? 0;
+  const totalMealsTomorrowAfterMyDonation =
+    donationType === "meals"
+      ? totalMealsTomorrow + mealCount
+      : donationType === "amount"
+        ? totalMealsTomorrow + perDayMeals
+        : totalMealsTomorrow;
   const canDonate = Boolean(
     statsPayload &&
       !statsPayload.stats.campaignEnded &&
@@ -258,20 +262,20 @@ export function DonationApp() {
 
             <section className="glass-card text-center">
               <div className="text-xs text-[var(--sand-faint)]">
-                الوجبات المحجوزة للغد
+                إجمالي وجبات الغد
               </div>
               <div className="mb-2 text-[11px] text-[var(--sand-subtle)]">
                 {distributionLabel}
               </div>
               <span className="meal-counter">
-                {formatEnglishNumber(bookedMealsTomorrow)}
+                {formatEnglishNumber(totalMealsTomorrow)}
               </span>
               <div className="mt-2 text-sm font-semibold text-[var(--sand-strong)]">
                 وجبة إفطار
               </div>
               <div className="divider" />
               <div className="text-xs text-[var(--sand-muted)]">
-                انضم للمتبرعين وساهم في إسعاد الصائمين
+                يشمل الحجز المباشر ومساهمة مبلغ الشهر لكل يوم
               </div>
             </section>
 
@@ -459,10 +463,10 @@ export function DonationApp() {
             {donationType === "meals" ? (
               <div className="rounded-[22px] bg-[rgba(201,149,106,0.08)] p-5 text-center">
                 <div className="text-xs text-[var(--sand-subtle)]">
-                  الوجبات المحجوزة للغد بعد تبرعك
+                  إجمالي وجبات الغد بعد تبرعك
                 </div>
                 <div className="mt-3 text-6xl font-black text-[var(--sand-strong)]">
-                  {formatEnglishNumber(bookedMealsAfterMyDonation)}
+                  {formatEnglishNumber(totalMealsTomorrowAfterMyDonation)}
                 </div>
                 <div className="mt-2 text-sm text-[var(--sand-strong)]">
                   وجبة مؤكدة في {distributionLabel}
@@ -494,6 +498,18 @@ export function DonationApp() {
                   <span className="text-sm text-[var(--sand-strong)]">
                     طوال شهر رمضان (
                     {formatEnglishNumber(statsPayload.stats.remainingDays)} يوم متبقٍ)
+                  </span>
+                </div>
+                <div className="confirm-row">
+                  <span>إضافة وجبات الغد</span>
+                  <span className="confirm-value">
+                    +{formatEnglishNumber(perDayMeals)} وجبة يوميًا
+                  </span>
+                </div>
+                <div className="confirm-row">
+                  <span>إجمالي وجبات الغد بعد تبرعك</span>
+                  <span className="confirm-value">
+                    {formatEnglishNumber(totalMealsTomorrowAfterMyDonation)} وجبة
                   </span>
                 </div>
               </div>
@@ -592,16 +608,10 @@ export function DonationApp() {
             </p>
             <div className="divider" />
             <div className="text-xs text-[var(--sand-faint)]">
-              {donationType === "meals"
-                ? "الوجبات المحجوزة للغد الآن"
-                : "الوجبات المتوقعة للغد الآن"}
+              إجمالي وجبات الغد الآن
             </div>
             <span className="meal-counter">
-              {formatEnglishNumber(
-                donationType === "meals"
-                  ? statsPayload.stats.directMeals
-                  : statsPayload.stats.projectedMealsTomorrow,
-              )}
+              {formatEnglishNumber(statsPayload.stats.projectedMealsTomorrow)}
             </span>
             <div className="text-sm text-[var(--sand-strong)]">وجبة إفطار</div>
             <button
