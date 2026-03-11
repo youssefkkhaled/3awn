@@ -15,6 +15,23 @@ function getDateParts(date: Date, timeZone: string) {
   ) as Record<"year" | "month" | "day", string>;
 }
 
+function getDateTimeParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  ) as Record<"year" | "month" | "day" | "hour", string>;
+}
+
 function dateKeyToUtcDate(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
@@ -49,7 +66,11 @@ export function getDistributionDateKey(
   date = new Date(),
   timeZone = DEFAULT_TIMEZONE,
 ) {
-  return addDaysToDateKey(getDateKeyInTimeZone(date, timeZone), 1);
+  const { year, month, day, hour } = getDateTimeParts(date, timeZone);
+  const currentDateKey = `${year}-${month}-${day}`;
+  const distributionOffsetDays = Number(hour) >= 5 ? 1 : 0;
+
+  return addDaysToDateKey(currentDateKey, distributionOffsetDays);
 }
 
 export function formatArabicDateLabel(dateKey: string) {

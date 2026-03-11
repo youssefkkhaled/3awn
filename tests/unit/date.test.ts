@@ -11,8 +11,14 @@ describe("date helpers", () => {
     expect(addDaysToDateKey("2026-03-10", 3)).toBe("2026-03-13");
   });
 
-  it("calculates tomorrow using Cairo time", () => {
-    const date = new Date("2026-03-10T22:30:00.000Z");
+  it("keeps the same distribution date before 5 AM Cairo", () => {
+    const date = new Date("2026-03-10T23:30:00.000Z");
+
+    expect(getDistributionDateKey(date, "Africa/Cairo")).toBe("2026-03-11");
+  });
+
+  it("switches to the next distribution date from 5 AM Cairo", () => {
+    const date = new Date("2026-03-11T03:30:00.000Z");
 
     expect(getDistributionDateKey(date, "Africa/Cairo")).toBe("2026-03-12");
   });
