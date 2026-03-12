@@ -148,7 +148,7 @@ export function DonationApp() {
     }
 
     if (!paymentAcknowledged) {
-      setValidationError("أكد أنك أتممت الدفع ورجعت إلى الموقع قبل تأكيد التبرع.");
+      setValidationError("اقرأ الملاحظة وحدد الإقرار أولاً لعرض بيانات الدفع.");
       return;
     }
 
@@ -551,32 +551,6 @@ export function DonationApp() {
               </div>
             )}
 
-            <div className="instapay-box">
-              <div className="text-xs text-[var(--sand-subtle)]">ادفع عبر</div>
-              <div className="mt-1 text-lg font-bold">💳 InstaPay</div>
-              <div className="mt-3 font-mono text-base text-[var(--sand-strong)]">
-                {statsPayload.payment.instapayHandle}
-              </div>
-              <a
-                href={statsPayload.payment.instapayLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-gold mt-4 inline-flex w-auto items-center justify-center px-6"
-              >
-                اضغط هنا للدفع ←
-              </a>
-            </div>
-
-            <div className="instapay-box">
-              <div className="text-xs text-[var(--sand-subtle)]">أو ادفع عبر</div>
-              <div className="mt-1 text-lg font-bold text-[#f28f8f]">
-                📱 فودافون كاش
-              </div>
-              <div className="mt-3 font-mono text-2xl tracking-[0.3em] text-[var(--sand-strong)]">
-                {statsPayload.payment.vodafoneCashNumber}
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-[rgba(201,149,106,0.2)] bg-[rgba(255,214,149,0.12)] p-4 text-right">
               <div className="text-sm font-bold text-[var(--sand-strong)]">
                 ملاحظة مهمة
@@ -598,9 +572,54 @@ export function DonationApp() {
                   }}
                 />
                 <span>
-                  أؤكد أنني أتممت الدفع وعدت إلى الموقع لتأكيد التبرع.
+                  أقر أنني قرأت الملاحظة، وسأعود إلى الموقع بعد الدفع لتأكيد
+                  التبرع.
                 </span>
               </label>
+            </div>
+
+            <div className="relative">
+              {!paymentAcknowledged ? (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[28px] bg-[rgba(255,248,237,0.58)] backdrop-blur-[2px]">
+                  <div className="rounded-2xl border border-[rgba(201,149,106,0.2)] bg-white/85 px-4 py-3 text-center text-sm font-semibold text-[var(--sand-strong)] shadow-sm">
+                    فعّل الإقرار أعلاه لعرض بيانات الدفع
+                  </div>
+                </div>
+              ) : null}
+
+              <div
+                className={`grid gap-4 transition ${
+                  paymentAcknowledged ? "" : "select-none blur-sm"
+                }`}
+              >
+                <div className="instapay-box">
+                  <div className="text-xs text-[var(--sand-subtle)]">ادفع عبر</div>
+                  <div className="mt-1 text-lg font-bold">💳 InstaPay</div>
+                  <div className="mt-3 font-mono text-base text-[var(--sand-strong)]">
+                    {statsPayload.payment.instapayHandle}
+                  </div>
+                  <a
+                    href={statsPayload.payment.instapayLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-gold mt-4 inline-flex w-auto items-center justify-center px-6"
+                    tabIndex={paymentAcknowledged ? 0 : -1}
+                    aria-disabled={!paymentAcknowledged}
+                  >
+                    اضغط هنا للدفع ←
+                  </a>
+                </div>
+
+                <div className="instapay-box">
+                  <div className="text-xs text-[var(--sand-subtle)]">أو ادفع عبر</div>
+                  <div className="mt-1 text-lg font-bold text-[#f28f8f]">
+                    📱 فودافون كاش
+                  </div>
+                  <div className="mt-3 font-mono text-2xl tracking-[0.3em] text-[var(--sand-strong)]">
+                    {statsPayload.payment.vodafoneCashNumber}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <TurnstileWidget
