@@ -569,6 +569,16 @@ export function DonationApp() {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-[rgba(201,149,106,0.2)] bg-[rgba(255,214,149,0.12)] p-4 text-right">
+              <div className="text-sm font-bold text-[var(--sand-strong)]">
+                ملاحظة مهمة
+              </div>
+              <div className="mt-2 text-sm leading-8 text-[var(--sand-muted)]">
+                بعد إتمام الدفع، يرجى الرجوع إلى الموقع والضغط على زر تأكيد الدفع
+                حتى يتم تسجيل تبرعك في النظام.
+              </div>
+            </div>
+
             <TurnstileWidget
               siteKey={statsPayload.turnstileSiteKey}
               resetKey={turnstileResetKey}
