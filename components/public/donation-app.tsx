@@ -580,8 +580,8 @@ export function DonationApp() {
 
             <div className="relative">
               {!paymentAcknowledged ? (
-                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[28px] bg-[rgba(255,248,237,0.58)] backdrop-blur-[2px]">
-                  <div className="rounded-2xl border border-[rgba(201,149,106,0.2)] bg-white/85 px-4 py-3 text-center text-sm font-semibold text-[var(--sand-strong)] shadow-sm">
+                <div className="absolute inset-0 z-10 flex cursor-not-allowed items-center justify-center rounded-[28px] bg-[rgba(255,248,237,0.62)] backdrop-blur-[2px]">
+                  <div className="max-w-sm rounded-3xl border border-[rgba(201,149,106,0.24)] bg-white/90 px-6 py-5 text-center text-base font-bold leading-8 text-[var(--sand-strong)] shadow-sm sm:text-lg">
                     فعّل الإقرار أعلاه لعرض بيانات الدفع
                   </div>
                 </div>
@@ -589,7 +589,7 @@ export function DonationApp() {
 
               <div
                 className={`grid gap-4 transition ${
-                  paymentAcknowledged ? "" : "select-none blur-sm"
+                  paymentAcknowledged ? "" : "pointer-events-none select-none blur-sm"
                 }`}
               >
                 <div className="instapay-box">
@@ -599,12 +599,17 @@ export function DonationApp() {
                     {statsPayload.payment.instapayHandle}
                   </div>
                   <a
-                    href={statsPayload.payment.instapayLink}
+                    href={paymentAcknowledged ? statsPayload.payment.instapayLink : undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-gold mt-4 inline-flex w-auto items-center justify-center px-6"
                     tabIndex={paymentAcknowledged ? 0 : -1}
                     aria-disabled={!paymentAcknowledged}
+                    onClick={(event) => {
+                      if (!paymentAcknowledged) {
+                        event.preventDefault();
+                      }
+                    }}
                   >
                     اضغط هنا للدفع ←
                   </a>
