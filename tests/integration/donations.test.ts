@@ -40,12 +40,22 @@ describe("createDonation", () => {
     getCampaignSnapshotMock
       .mockResolvedValueOnce({
         directMeals: 3,
-        monthlyPoolEGP: 850,
+        monthlyPoolContributions: [
+          {
+            amountEGP: 850,
+            startDistributionDate: "2026-03-11",
+          },
+        ],
         totalConfirmedDonations: 1,
       })
       .mockResolvedValueOnce({
         directMeals: 5,
-        monthlyPoolEGP: 850,
+        monthlyPoolContributions: [
+          {
+            amountEGP: 850,
+            startDistributionDate: "2026-03-11",
+          },
+        ],
         totalConfirmedDonations: 2,
       });
     insertConfirmedDonationMock.mockResolvedValue("donation-1");

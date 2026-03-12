@@ -48,6 +48,10 @@ function dateKeyToEpochDays(dateKey: string) {
   return Math.floor(dateKeyToUtcDate(dateKey).getTime() / 86_400_000);
 }
 
+export function getDateKeyDifference(startDateKey: string, endDateKey: string) {
+  return dateKeyToEpochDays(endDateKey) - dateKeyToEpochDays(startDateKey);
+}
+
 export function getDateKeyInTimeZone(
   date = new Date(),
   timeZone = DEFAULT_TIMEZONE,
@@ -88,10 +92,7 @@ export function getRemainingDays(
   timeZone = DEFAULT_TIMEZONE,
 ) {
   const todayKey = getDateKeyInTimeZone(date, timeZone);
-  return Math.max(
-    0,
-    dateKeyToEpochDays(campaignEndDate) - dateKeyToEpochDays(todayKey),
-  );
+  return Math.max(0, getDateKeyDifference(todayKey, campaignEndDate));
 }
 
 export function getDistributionWindowDays(
@@ -101,12 +102,7 @@ export function getDistributionWindowDays(
 ) {
   const distributionDateKey = getDistributionDateKey(date, timeZone);
 
-  return Math.max(
-    0,
-    dateKeyToEpochDays(campaignEndDate) -
-      dateKeyToEpochDays(distributionDateKey) +
-      1,
-  );
+  return Math.max(0, getDateKeyDifference(distributionDateKey, campaignEndDate) + 1);
 }
 
 export function isCampaignEnded(

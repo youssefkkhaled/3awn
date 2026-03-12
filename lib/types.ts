@@ -20,9 +20,14 @@ export interface CampaignSettings {
   updatedAt: string;
 }
 
+export interface MonthlyPoolContribution {
+  amountEGP: number;
+  startDistributionDate: string;
+}
+
 export interface CampaignSnapshot {
   directMeals: number;
-  monthlyPoolEGP: number;
+  monthlyPoolContributions: MonthlyPoolContribution[];
   totalConfirmedDonations: number;
 }
 
@@ -34,8 +39,11 @@ export interface PublicStats {
   distributionWindowDays: number;
   directMeals: number;
   monthlyPoolEGP: number;
+  monthlyPoolGrossEGP: number;
+  monthlyPoolSpentEGP: number;
   monthlyPoolMealsTotal: number;
   monthlyPoolMealsForDistributionDate: number;
+  totalMealsForDistributionDate: number;
   projectedMealsTomorrow: number;
   campaignEnded: boolean;
   acceptingDonations: boolean;

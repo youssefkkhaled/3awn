@@ -22,12 +22,17 @@ const settings: CampaignSettings = {
 };
 
 describe("buildPublicStats", () => {
-  it("allocates monthly-pool meals in a round-robin cycle that starts with the current distribution day", () => {
+  it("allocates monthly-pool meals from the current distribution day balance", () => {
     const stats = buildPublicStats(
       settings,
       {
         directMeals: 25,
-        monthlyPoolEGP: 850,
+        monthlyPoolContributions: [
+          {
+            amountEGP: 850,
+            startDistributionDate: "2026-03-13",
+          },
+        ],
         totalConfirmedDonations: 10,
       },
       new Date("2026-03-12T12:00:00.000Z"),
@@ -35,10 +40,39 @@ describe("buildPublicStats", () => {
 
     expect(stats.remainingDays).toBe(8);
     expect(stats.distributionWindowDays).toBe(8);
+    expect(stats.monthlyPoolEGP).toBe(850);
+    expect(stats.monthlyPoolGrossEGP).toBe(850);
+    expect(stats.monthlyPoolSpentEGP).toBe(0);
     expect(stats.monthlyPoolMealsTotal).toBe(10);
     expect(stats.monthlyPoolMealsForDistributionDate).toBe(2);
+    expect(stats.totalMealsForDistributionDate).toBe(27);
     expect(stats.projectedMealsTomorrow).toBe(27);
     expect(stats.campaignEnded).toBe(false);
+  });
+
+  it("reduces the remaining monthly pool after past distribution days are spent", () => {
+    const stats = buildPublicStats(
+      settings,
+      {
+        directMeals: 4,
+        monthlyPoolContributions: [
+          {
+            amountEGP: 850,
+            startDistributionDate: "2026-03-11",
+          },
+        ],
+        totalConfirmedDonations: 10,
+      },
+      new Date("2026-03-12T12:00:00.000Z"),
+      "2026-03-11",
+    );
+
+    expect(stats.monthlyPoolGrossEGP).toBe(850);
+    expect(stats.monthlyPoolSpentEGP).toBe(170);
+    expect(stats.monthlyPoolEGP).toBe(680);
+    expect(stats.monthlyPoolMealsTotal).toBe(8);
+    expect(stats.monthlyPoolMealsForDistributionDate).toBe(1);
+    expect(stats.totalMealsForDistributionDate).toBe(5);
   });
 
   it("marks the campaign as ended once the inclusive remaining window reaches zero", () => {
@@ -46,7 +80,7 @@ describe("buildPublicStats", () => {
       settings,
       {
         directMeals: 0,
-        monthlyPoolEGP: 0,
+        monthlyPoolContributions: [],
         totalConfirmedDonations: 0,
       },
       new Date("2026-03-22T12:00:00.000Z"),
@@ -54,6 +88,7 @@ describe("buildPublicStats", () => {
 
     expect(stats.remainingDays).toBe(0);
     expect(stats.distributionWindowDays).toBe(0);
+    expect(stats.monthlyPoolEGP).toBe(0);
     expect(stats.monthlyPoolMealsTotal).toBe(0);
     expect(stats.monthlyPoolMealsForDistributionDate).toBe(0);
     expect(stats.campaignEnded).toBe(true);

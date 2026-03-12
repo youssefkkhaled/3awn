@@ -6,6 +6,7 @@ import {
   getDonationRateLimitWindowMinutes,
   isObjectStorageConfigured,
 } from "@/lib/env";
+import { getDistributionDateKey } from "@/lib/date";
 import { AppError, RateLimitAppError } from "@/lib/errors";
 import { uploadObjectToStorage } from "@/lib/object-storage";
 import { queryPostgres, withPostgresClient } from "@/lib/postgres";
@@ -144,20 +145,6 @@ export async function getCampaignSnapshot(distributionDate: string) {
               AND effective_date = $2
           ), 0)
         ) AS direct_meals,
-        (
-          COALESCE((
-            SELECT SUM(amount_egp)
-            FROM donations
-            WHERE status = 'confirmed'
-              AND type = 'amount'
-          ), 0)
-          +
-          COALESCE((
-            SELECT SUM(delta_value)
-            FROM admin_adjustments
-            WHERE kind = 'amount'
-          ), 0)
-        ) AS monthly_pool_egp,
         COALESCE((
           SELECT COUNT(*)
           FROM donations
@@ -167,10 +154,33 @@ export async function getCampaignSnapshot(distributionDate: string) {
     [distributionDate, distributionDate],
   );
   const row = result.rows[0] as DatabaseRow | undefined;
+  const contributionRows = await queryPostgres<{
+    amount_egp: number;
+    created_at: string;
+    effective_date: string | null;
+  }>(
+    `
+      SELECT amount_egp, created_at, NULL::text AS effective_date
+      FROM donations
+      WHERE status = 'confirmed'
+        AND type = 'amount'
+      UNION ALL
+      SELECT delta_value AS amount_egp, created_at, effective_date
+      FROM admin_adjustments
+      WHERE kind = 'amount'
+    `,
+  );
 
   return {
     directMeals: Number(row?.direct_meals ?? 0),
-    monthlyPoolEGP: Number(row?.monthly_pool_egp ?? 0),
+    monthlyPoolContributions: contributionRows.rows.map((contribution) => ({
+      amountEGP: Number(contribution.amount_egp),
+      startDistributionDate:
+        typeof contribution.effective_date === "string" &&
+        contribution.effective_date.length > 0
+          ? contribution.effective_date
+          : getDistributionDateKey(new Date(String(contribution.created_at))),
+    })),
     totalConfirmedDonations: Number(row?.total_confirmed_donations ?? 0),
   } satisfies CampaignSnapshot;
 }

@@ -1,7 +1,8 @@
 import {
+  addDaysToDateKey,
+  getDateKeyDifference,
   formatArabicDateLabel,
   getDistributionDateKey,
-  getDistributionWindowDays,
   getRemainingDays,
 } from "@/lib/date";
 import { DEFAULT_HERO_IMAGE_PATH } from "@/lib/seed";
@@ -23,6 +24,13 @@ export function getMonthlyPoolMealsTotal(
   return Math.max(0, Math.floor(monthlyPoolEGP / mealPriceEGP));
 }
 
+export function getDistributionWindowDaysFromDate(
+  distributionDate: string,
+  campaignEndDate: string,
+) {
+  return Math.max(0, getDateKeyDifference(distributionDate, campaignEndDate) + 1);
+}
+
 export function getRoundRobinMealsForDayOffset(
   totalMeals: number,
   distributionWindowDays: number,
@@ -41,30 +49,127 @@ export function getRoundRobinMealsForDayOffset(
   return baseMealsPerDay + (normalizedOffset < remainderMeals ? 1 : 0);
 }
 
+export function getMonthlyPoolGrossEGP(
+  contributions: CampaignSnapshot["monthlyPoolContributions"],
+) {
+  return contributions.reduce(
+    (total, contribution) => total + contribution.amountEGP,
+    0,
+  );
+}
+
+function groupMonthlyPoolContributions(
+  contributions: CampaignSnapshot["monthlyPoolContributions"],
+) {
+  const grouped = new Map<string, number>();
+
+  for (const contribution of contributions) {
+    grouped.set(
+      contribution.startDistributionDate,
+      (grouped.get(contribution.startDistributionDate) ?? 0) +
+        contribution.amountEGP,
+    );
+  }
+
+  return grouped;
+}
+
+export function getMonthlyPoolBalanceAtStartOfDistributionDate(args: {
+  contributions: CampaignSnapshot["monthlyPoolContributions"];
+  mealPriceEGP: number;
+  campaignEndDate: string;
+  distributionDate: string;
+}) {
+  const relevantContributions = args.contributions
+    .filter(
+      (contribution) =>
+        contribution.amountEGP !== 0 &&
+        contribution.startDistributionDate <= args.campaignEndDate,
+    )
+    .sort((left, right) =>
+      left.startDistributionDate.localeCompare(right.startDistributionDate),
+    );
+
+  if (
+    relevantContributions.length === 0 ||
+    args.distributionDate > args.campaignEndDate ||
+    args.distributionDate < relevantContributions[0].startDistributionDate
+  ) {
+    return 0;
+  }
+
+  const contributionsByDate = groupMonthlyPoolContributions(relevantContributions);
+  let balanceEGP = 0;
+
+  for (
+    let currentDate = relevantContributions[0].startDistributionDate;
+    currentDate <= args.distributionDate && currentDate <= args.campaignEndDate;
+    currentDate = addDaysToDateKey(currentDate, 1)
+  ) {
+    balanceEGP += contributionsByDate.get(currentDate) ?? 0;
+
+    if (currentDate === args.distributionDate) {
+      return balanceEGP;
+    }
+
+    const mealsForCurrentDate = getRoundRobinMealsForDayOffset(
+      getMonthlyPoolMealsTotal(balanceEGP, args.mealPriceEGP),
+      getDistributionWindowDaysFromDate(currentDate, args.campaignEndDate),
+    );
+
+    balanceEGP -= mealsForCurrentDate * args.mealPriceEGP;
+  }
+
+  return balanceEGP;
+}
+
 export function buildPublicStats(
   settings: CampaignSettings,
   snapshot: CampaignSnapshot,
   now = new Date(),
+  selectedDistributionDate?: string,
 ): PublicStats {
   const remainingDays = getRemainingDays(
     settings.campaignEndDate,
     now,
     settings.timezone,
   );
-  const distributionDate = getDistributionDateKey(now, settings.timezone);
-  const distributionWindowDays = getDistributionWindowDays(
+  const currentDistributionDate = getDistributionDateKey(now, settings.timezone);
+  const distributionDate = selectedDistributionDate ?? currentDistributionDate;
+  const distributionWindowDays = getDistributionWindowDaysFromDate(
+    distributionDate,
     settings.campaignEndDate,
-    now,
-    settings.timezone,
   );
+  const monthlyPoolGrossEGP = getMonthlyPoolGrossEGP(
+    snapshot.monthlyPoolContributions,
+  );
+  const monthlyPoolEGP = getMonthlyPoolBalanceAtStartOfDistributionDate({
+    contributions: snapshot.monthlyPoolContributions,
+    mealPriceEGP: settings.mealPriceEGP,
+    campaignEndDate: settings.campaignEndDate,
+    distributionDate: currentDistributionDate,
+  });
+  const monthlyPoolBalanceForDistributionDate =
+    getMonthlyPoolBalanceAtStartOfDistributionDate({
+      contributions: snapshot.monthlyPoolContributions,
+      mealPriceEGP: settings.mealPriceEGP,
+      campaignEndDate: settings.campaignEndDate,
+      distributionDate,
+    });
+  const monthlyPoolSpentEGP = monthlyPoolGrossEGP - monthlyPoolEGP;
   const monthlyPoolMealsTotal = getMonthlyPoolMealsTotal(
-    snapshot.monthlyPoolEGP,
+    monthlyPoolEGP,
     settings.mealPriceEGP,
   );
   const monthlyPoolMealsForDistributionDate = getRoundRobinMealsForDayOffset(
-    monthlyPoolMealsTotal,
+    getMonthlyPoolMealsTotal(
+      monthlyPoolBalanceForDistributionDate,
+      settings.mealPriceEGP,
+    ),
     distributionWindowDays,
   );
+  const totalMealsForDistributionDate =
+    snapshot.directMeals + monthlyPoolMealsForDistributionDate;
 
   return {
     distributionDate,
@@ -73,11 +178,13 @@ export function buildPublicStats(
     remainingDays,
     distributionWindowDays,
     directMeals: snapshot.directMeals,
-    monthlyPoolEGP: snapshot.monthlyPoolEGP,
+    monthlyPoolEGP,
+    monthlyPoolGrossEGP,
+    monthlyPoolSpentEGP,
     monthlyPoolMealsTotal,
     monthlyPoolMealsForDistributionDate,
-    projectedMealsTomorrow:
-      snapshot.directMeals + monthlyPoolMealsForDistributionDate,
+    totalMealsForDistributionDate,
+    projectedMealsTomorrow: totalMealsForDistributionDate,
     campaignEnded: remainingDays === 0,
     acceptingDonations: settings.acceptingDonations,
   };
