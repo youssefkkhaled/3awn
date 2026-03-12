@@ -36,6 +36,7 @@ export function DonationApp() {
   const [amountEGP, setAmountEGP] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [paymentAcknowledged, setPaymentAcknowledged] = useState(false);
   const [statsPayload, setStatsPayload] = useState<PublicStatsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -77,6 +78,7 @@ export function DonationApp() {
     setAmountEGP("");
     setTurnstileToken("");
     setTurnstileResetKey((current) => current + 1);
+    setPaymentAcknowledged(false);
     setValidationError(null);
   };
 
@@ -136,11 +138,17 @@ export function DonationApp() {
       }
     }
 
+    setPaymentAcknowledged(false);
     setScreenState("confirm");
   };
 
   const submitDonation = async () => {
     if (!donationType || !statsPayload) {
+      return;
+    }
+
+    if (!paymentAcknowledged) {
+      setValidationError("أكد أنك أتممت الدفع ورجعت إلى الموقع قبل تأكيد التبرع.");
       return;
     }
 
@@ -577,6 +585,22 @@ export function DonationApp() {
                 بعد إتمام الدفع، يرجى الرجوع إلى الموقع والضغط على زر تأكيد الدفع
                 حتى يتم تسجيل تبرعك في النظام.
               </div>
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-[rgba(201,149,106,0.18)] bg-white/55 p-3 text-sm text-[var(--sand-main)]">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 accent-[var(--sand-strong)]"
+                  checked={paymentAcknowledged}
+                  onChange={(event) => {
+                    setPaymentAcknowledged(event.target.checked);
+                    if (event.target.checked) {
+                      setValidationError(null);
+                    }
+                  }}
+                />
+                <span>
+                  أؤكد أنني أتممت الدفع وعدت إلى الموقع لتأكيد التبرع.
+                </span>
+              </label>
             </div>
 
             <TurnstileWidget
@@ -593,14 +617,17 @@ export function DonationApp() {
               <button
                 type="button"
                 className="btn-ghost flex-1"
-                onClick={() => setScreenState("choose")}
+                onClick={() => {
+                  setPaymentAcknowledged(false);
+                  setScreenState("choose");
+                }}
               >
                 رجوع
               </button>
               <button
                 type="button"
                 className="btn-gold flex-[2]"
-                disabled={submitting || !canDonate}
+                disabled={submitting || !canDonate || !paymentAcknowledged}
                 onClick={() => void submitDonation()}
               >
                 {submitting ? "جاري التأكيد..." : "✓ تأكيد الدفع"}
