@@ -6,6 +6,7 @@ import {
   getDonationRateLimitWindowMinutes,
   isObjectStorageConfigured,
 } from "@/lib/env";
+import { buildLatestActivity } from "@/lib/activity";
 import { getDistributionDateKey } from "@/lib/date";
 import { AppError, RateLimitAppError } from "@/lib/errors";
 import { uploadObjectToStorage } from "@/lib/object-storage";
@@ -22,7 +23,6 @@ import type {
   ConfirmedDonationInsert,
   DonationFilters,
   DonationRecord,
-  LatestActivityItem,
 } from "@/lib/types";
 
 type DatabaseRow = Record<string, unknown>;
@@ -284,9 +284,13 @@ export async function insertConfirmedDonation(input: ConfirmedDonationInsert) {
   });
 }
 
-export async function listDonations(filters: DonationFilters = {}) {
+export async function listDonations(
+  filters: DonationFilters = {},
+  options: { limit?: number | null } = {},
+) {
   const clauses: string[] = [];
   const params: unknown[] = [];
+  const limit = options.limit === undefined ? 100 : options.limit;
 
   if (filters.type) {
     params.push(filters.type);
@@ -304,13 +308,20 @@ export async function listDonations(filters: DonationFilters = {}) {
   }
 
   const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limitClause =
+    typeof limit === "number" ? `LIMIT $${params.length + 1}` : "";
+
+  if (typeof limit === "number") {
+    params.push(limit);
+  }
+
   const result = await queryPostgres(
     `
       SELECT *
       FROM donations
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT 100
+      ${limitClause}
     `,
     params,
   );
@@ -420,11 +431,14 @@ export async function logAuditEvent(args: {
   );
 }
 
-export async function listAuditLogs(limit = 20) {
-  const result = await queryPostgres(
-    "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1",
-    [limit],
-  );
+export async function listAuditLogs(limit: number | null = 20) {
+  const result =
+    typeof limit === "number"
+      ? await queryPostgres(
+          "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1",
+          [limit],
+        )
+      : await queryPostgres("SELECT * FROM audit_logs ORDER BY created_at DESC");
 
   return result.rows.map((row) => mapAuditLog(row as DatabaseRow));
 }
@@ -511,34 +525,9 @@ export async function updateCampaignSettings(
 
 export async function listLatestActivity() {
   const [donations, auditLogs] = await Promise.all([
-    listDonations(),
-    listAuditLogs(10),
+    listDonations({}, { limit: null }),
+    listAuditLogs(null),
   ]);
 
-  return [
-    ...donations.slice(0, 5).map(
-      (donation): LatestActivityItem => ({
-        id: donation.id,
-        kind: "donation",
-        title:
-          donation.type === "meals"
-            ? "تبرع وجبات جديد"
-            : "تبرع مبلغ جديد للشهر",
-        description:
-          donation.type === "meals"
-            ? `${donation.mealsCount ?? 0} وجبة بقيمة ${donation.amountEGP} جنيه`
-            : `${donation.amountEGP} جنيه لصندوق الشهر`,
-        createdAt: donation.createdAt,
-      }),
-    ),
-    ...auditLogs.slice(0, 5).map(
-      (audit): LatestActivityItem => ({
-        id: audit.id,
-        kind: "audit",
-        title: audit.action,
-        description: `${audit.entityType}${audit.entityId ? ` • ${audit.entityId}` : ""}`,
-        createdAt: audit.createdAt,
-      }),
-    ),
-  ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  return buildLatestActivity(donations, auditLogs);
 }

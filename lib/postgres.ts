@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { Pool, type PoolClient, type QueryResultRow, types } from "pg";
 
 import {
   getAdminEmail,
@@ -11,6 +11,10 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/seed";
 import { hashPassword, nowIso } from "@/lib/server-utils";
+
+// Old deployments may still have `timestamp without time zone` columns.
+// Parse those as UTC so historical rows don't render 2 hours behind in Egypt.
+types.setTypeParser(types.builtins.TIMESTAMP, (value) => new Date(`${value}Z`));
 
 const globalForPostgres = globalThis as typeof globalThis & {
   __iftarPostgresPool?: Pool;
@@ -26,9 +30,43 @@ function getPool() {
           ? { rejectUnauthorized: false }
           : undefined,
     });
+    globalForPostgres.__iftarPostgresPool.on("connect", (client) => {
+      void client.query("SET TIME ZONE 'UTC'");
+    });
   }
 
   return globalForPostgres.__iftarPostgresPool;
+}
+
+async function ensureTimestampTzColumn(
+  client: PoolClient,
+  tableName: string,
+  columnName: string,
+) {
+  const result = await client.query<{ data_type: string }>(
+    `
+      SELECT data_type
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = $1
+        AND column_name = $2
+      LIMIT 1
+    `,
+    [tableName, columnName],
+  );
+
+  if (result.rows[0]?.data_type !== "timestamp without time zone") {
+    return;
+  }
+
+  await client.query(
+    `
+      ALTER TABLE ${tableName}
+      ALTER COLUMN ${columnName}
+      TYPE TIMESTAMPTZ
+      USING ${columnName} AT TIME ZONE 'UTC'
+    `,
+  );
 }
 
 async function initializeSchema(client: PoolClient) {
@@ -108,6 +146,22 @@ async function initializeSchema(client: PoolClient) {
       created_at TIMESTAMPTZ NOT NULL
     );
   `);
+
+  const timestampColumns = [
+    ["campaign_settings", "created_at"],
+    ["campaign_settings", "updated_at"],
+    ["donations", "created_at"],
+    ["donations", "voided_at"],
+    ["admin_users", "created_at"],
+    ["admin_sessions", "created_at"],
+    ["admin_sessions", "expires_at"],
+    ["admin_adjustments", "created_at"],
+    ["audit_logs", "created_at"],
+  ] as const;
+
+  for (const [tableName, columnName] of timestampColumns) {
+    await ensureTimestampTzColumn(client, tableName, columnName);
+  }
 }
 
 async function seedDatabase(client: PoolClient) {
